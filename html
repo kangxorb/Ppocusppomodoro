@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>뽀모도로 타이머</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 기본 폰트 및 부드러운 전환 효과 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* 다크 모드 기본 배경/텍스트 색상 (Tailwind가 로드되기 전 깜박임 방지) */
+        :root {
+            color-scheme: light dark;
+        }
+        /* 버튼 포커스 시 그림자 효과 개선 */
+        button:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+        }
+        /* 입력창 포커스 */
+        input:focus {
+            outline: none;
+            border-color: #3B82F6; /* blue-500 */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* 설정 모달용 스타일 */
+        #settings-modal {
+            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 overflow-hidden">
+
+    <div id="app" class="relative flex flex-col items-center justify-center min-h-screen p-4 w-full max-w-md mx-auto">
+        
+        <!-- 설정 버튼 -->
+        <button id="settings-btn" class="absolute top-4 right-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        </button>
+
+        <!-- 상태 표시 -->
+        <div id="status" class="text-xl font-semibold mb-2 text-blue-500 dark:text-blue-400">
+            Ppocus
+        </div>
+
+        <!-- 타이머 -->
+        <div id="timer" class="text-8xl font-bold mb-4">
+            25:00
+        </div>
+
+        <!-- 현재 작업 입력 -->
+        <input id="task-input" type="text" placeholder="무엇에 집중하고 있나요?" class="w-full max-w-xs text-center bg-gray-100 dark:bg-gray-700 border border-transparent rounded-lg px-3 py-2 text-sm focus:border-blue-500 transition-all mb-6">
+
+        <!-- 컨트롤 버튼 -->
+        <div class="flex space-x-4 mb-6">
+            <button id="start-pause-btn" class="w-24 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-all transform hover:scale-105">
+                Start
+            </button>
+            <button id="reset-btn" class="w-24 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-100 font-bold py-3 px-4 rounded-lg shadow-md transition-all transform hover:scale-105">
+                Reset
+            </button>
+        </div>
+
+        <!-- 뽀모도로 카운터 -->
+        <div id="counter" class="text-lg">
+            오늘 완료: <span id="count-display" class="font-bold">🍅 x 0</span>
+        </div>
+
+        <!-- 설정 모달 -->
+        <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 opacity-0 -translate-y-10 pointer-events-none">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
+                <h2 class="text-2xl font-bold mb-6 text-center">설정</h2>
+                
+                <div class="mb-4">
+                    <label for="focus-time" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">집중 시간 (분)</label>
+                    <input type="number" id="focus-time" min="1" max="60" class="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:border-blue-500 transition-all">
+                </div>
+                
+                <div class="mb-6">
+                    <label for="break-time" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">휴식 시간 (분)</label>
+                    <input type="number" id="break-time" min="1" max="30" class="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:border-blue-500 transition-all">
+                </div>
+                
+                <button id="save-settings-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all">
+                    저장
+                </button>
+                <button id="close-settings-btn" class="w-full mt-2 text-gray-600 dark:text-gray-400 hover:underline">
+                    닫기
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM 요소 ---
+            const timerDisplay = document.getElementById('timer');
+            const statusDisplay = document.getElementById('status');
+            const taskInput = document.getElementById('task-input');
+            const startPauseBtn = document.getElementById('start-pause-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const countDisplay = document.getElementById('count-display');
+            
+            // 설정 모달 DOM
+            const settingsBtn = document.getElementById('settings-btn');
+            const settingsModal = document.getElementById('settings-modal');
+            const closeSettingsBtn = document.getElementById('close-settings-btn');
+            const saveSettingsBtn = document.getElementById('save-settings-btn');
+            const focusTimeInput = document.getElementById('focus-time');
+            const breakTimeInput = document.getElementById('break-time');
+
+            // --- 상태 변수 ---
+            let timerInterval = null;
+            let isRunning = false;
+            let currentMode = 'focus'; // 'focus' or 'break'
+            
+            // localStorage에서 값 로드 (기본값: 25분, 5분)
+            let focusTime = parseInt(localStorage.getItem('pomo.focusTime') || '25', 10);
+            let breakTime = parseInt(localStorage.getItem('pomo.breakTime') || '5', 10);
+            
+            let timeLeft = focusTime * 60; // 초 단위
+            let pomodoroCount = 0;
+            let lastResetDate = localStorage.getItem('pomo.lastResetDate');
+
+            // 오디오 컨텍스트 (알림음용)
+            let audioContext;
+            try {
+                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.warn('Web Audio API is not supported in this browser.');
+            }
+
+            // --- 함수 ---
+
+            // 오늘 날짜인지 확인하여 카운터 초기화
+            function checkAndResetCount() {
+                const today = new Date().toLocaleDateString();
+                if (lastResetDate !== today) {
+                    pomodoroCount = 0;
+                    lastResetDate = today;
+                    localStorage.setItem('pomo.count', '0');
+                    localStorage.setItem('pomo.lastResetDate', today);
+                } else {
+                    pomodoroCount = parseInt(localStorage.getItem('pomo.count') || '0', 10);
+                }
+                updateCounterDisplay();
+            }
+
+            // 카운터 표시 업데이트
+            function updateCounterDisplay() {
+                countDisplay.textContent = `🍅 x ${pomodoroCount}`;
+            }
+
+            // 타이머 표시 업데이트 (MM:SS)
+            function updateTimerDisplay() {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                timerDisplay.textContent = display;
+                
+                // 브라우저 탭 제목 업데이트
+                const icon = currentMode === 'focus' ? '🍅' : '☕️';
+                document.title = `${icon} ${display} - ${taskInput.value || '뽀모도로'}`;
+            }
+
+            // 알림음 재생
+            function playAlertSound() {
+                if (!audioContext) return;
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.type = 'sine'; // 'sine', 'square', 'sawtooth', 'triangle'
+                oscillator.frequency.setValueAtTime(660, audioContext.currentTime); // 주파수 (Hz)
+                gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); // 볼륨
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3); // 0.3초간 재생
+            }
+
+            // 모드 전환 (Focus <-> Break)
+            function switchMode() {
+                if (currentMode === 'focus') {
+                    currentMode = 'break';
+                    timeLeft = breakTime * 60;
+                    statusDisplay.textContent = '☕️ Break';
+                    statusDisplay.classList.remove('text-blue-500', 'dark:text-blue-400');
+                    statusDisplay.classList.add('text-green-500', 'dark:text-green-400');
+                    
+                    // 집중 세션 완료 시 카운트 증가
+                    pomodoroCount++;
+                    localStorage.setItem('pomo.count', pomodoroCount);
+                    updateCounterDisplay();
+
+                } else {
+                    currentMode = 'focus';
+                    timeLeft = focusTime * 60;
+                    statusDisplay.textContent = 'Ppocus';
+                    statusDisplay.classList.remove('text-green-500', 'dark:text-green-400');
+                    statusDisplay.classList.add('text-blue-500', 'dark:text-blue-400');
+                }
+                updateTimerDisplay();
+                playAlertSound();
+                
+                // 모드 전환 후 타이머 자동 시작 (선택적)
+                // startTimer(); 
+                // 여기서는 사용자가 수동으로 시작하도록 정지 상태로 둡니다.
+                pauseTimer();
+                resetTimer(false); // UI만 리셋
+            }
+
+            // 카운트다운 로직
+            function countdown() {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateTimerDisplay();
+                } else {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    isRunning = false;
+                    switchMode();
+                }
+            }
+
+            // 타이머 시작
+            function startTimer() {
+                if (isRunning) return;
+                isRunning = true;
+                startPauseBtn.textContent = 'Pause';
+                startPauseBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600', 'dark:bg-blue-600', 'dark:hover:bg-blue-700');
+                startPauseBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'dark:bg-yellow-600', 'dark:hover:bg-yellow-700');
+                
+                // 오디오 컨텍스트 활성화 (사용자 상호작용)
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+
+                timerInterval = setInterval(countdown, 1000);
+                updateTimerDisplay(); // 탭 제목 즉시 변경
+            }
+
+            // 타이머 일시정지
+            function pauseTimer() {
+                if (!isRunning) return;
+                isRunning = false;
+                clearInterval(timerInterval);
+                timerInterval = null;
+                startPauseBtn.textContent = 'Start';
+                startPauseBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'dark:bg-yellow-600', 'dark:hover:bg-yellow-700');
+                startPauseBtn.classList.add('bg-blue-500', 'hover:bg-blue-600', 'dark:bg-blue-600', 'dark:hover:bg-blue-700');
+                document.title = "⏸ 뽀모도로 타이머";
+            }
+
+            // 타이머 리셋
+            function resetTimer(confirmReset = true) {
+                if (isRunning && confirmReset) {
+                    if (!confirm("타이머가 실행 중입니다. 초기화하시겠습니까?")) {
+                        return;
+                    }
+                }
+                
+                pauseTimer(); // 일단 정지
+                timeLeft = (currentMode === 'focus') ? focusTime * 60 : breakTime * 60;
+                updateTimerDisplay();
+                document.title = "뽀모도로 타이머";
+            }
+            
+            // 설정 모달 열기
+            function openSettings() {
+                focusTimeInput.value = focusTime;
+                breakTimeInput.value = breakTime;
+                settingsModal.classList.remove('opacity-0', '-translate-y-10', 'pointer-events-none');
+                settingsModal.classList.add('opacity-100', 'translate-y-0');
+            }
+
+            // 설정 모달 닫기
+            function closeSettings() {
+                settingsModal.classList.add('opacity-0', '-translate-y-10', 'pointer-events-none');
+                settingsModal.classList.remove('opacity-100', 'translate-y-0');
+            }
+
+            // 설정 저장
+            function saveSettings() {
+                const newFocusTime = parseInt(focusTimeInput.value, 10);
+                const newBreakTime = parseInt(breakTimeInput.value, 10);
+
+                if (newFocusTime > 0 && newFocusTime <= 60) {
+                    focusTime = newFocusTime;
+                    localStorage.setItem('pomo.focusTime', focusTime);
+                }
+                
+                if (newBreakTime > 0 && newBreakTime <= 30) {
+                    breakTime = newBreakTime;
+                    localStorage.setItem('pomo.breakTime', breakTime);
+                }
+
+                // 타이머가 작동 중이 아닐 때만 시간 리셋
+                if (!isRunning) {
+                    resetTimer(false);
+                }
+                
+                closeSettings();
+            }
+
+
+            // --- 이벤트 리스너 ---
+            startPauseBtn.addEventListener('click', () => {
+                if (isRunning) {
+                    pauseTimer();
+                } else {
+                    startTimer();
+                }
+            });
+
+            resetBtn.addEventListener('click', () => resetTimer(true));
+
+            settingsBtn.addEventListener('click', openSettings);
+            closeSettingsBtn.addEventListener('click', closeSettings);
+            saveSettingsBtn.addEventListener('click', saveSettings);
+            
+            // 모달 바깥 클릭 시 닫기
+            settingsModal.addEventListener('click', (e) => {
+                if (e.target === settingsModal) {
+                    closeSettings();
+                }
+            });
+
+            // --- 초기화 ---
+            checkAndResetCount();
+            updateTimerDisplay();
+        });
+    </script>
+</body>
+</html>
